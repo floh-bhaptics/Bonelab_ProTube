@@ -131,7 +131,7 @@ namespace Bonelab_ProTube
                 bool rightHand = (hand.handedness == Il2CppSLZ.Handedness.RIGHT);
                 ForceTubeVRChannel myChannel = ForceTubeVRChannel.pistol1;
                 if (!rightHand) myChannel = ForceTubeVRChannel.pistol2;
-                ForceTubeVRInterface.Rumble(200, 100f, myChannel);
+                ForceTubeVRInterface.Rumble(150, 40f, myChannel);
             }
         }
 
@@ -149,7 +149,7 @@ namespace Bonelab_ProTube
                 bool rightHand = (hand.handedness == Il2CppSLZ.Handedness.RIGHT);
                 ForceTubeVRChannel myChannel = ForceTubeVRChannel.pistol1;
                 if (!rightHand) myChannel = ForceTubeVRChannel.pistol2;
-                ForceTubeVRInterface.Rumble(200, 100f, myChannel);
+                ForceTubeVRInterface.Rumble(150, 40f, myChannel);
             }
         }
         
