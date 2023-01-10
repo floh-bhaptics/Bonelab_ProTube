@@ -8,7 +8,7 @@ using Il2Cpp;
 using System.Text;
 using System.Text.Json;
 
-[assembly: MelonInfo(typeof(Bonelab_ProTube.Bonelab_ProTube), "Bonelab_ProTube", "1.0.0", "Florian Fahrenberger")]
+[assembly: MelonInfo(typeof(Bonelab_ProTube.Bonelab_ProTube), "Bonelab_ProTube", "1.0.1", "Florian Fahrenberger")]
 [assembly: MelonGame("Stress Level Zero", "BONELAB")]
 
 namespace Bonelab_ProTube
@@ -49,13 +49,13 @@ namespace Bonelab_ProTube
                 if ((readChannel("pistol1") == "") || (readChannel("pistol2") == ""))
                 {
                     MelonLogger.Msg("No configuration files found, saving current right and left hand pistols.");
-                    saveChannel("pistol1", pistol1[0].GetProperty("name").ToString());
-                    saveChannel("pistol2", pistol2[0].GetProperty("name").ToString());
+                    saveChannel("rightHand", pistol1[0].GetProperty("name").ToString());
+                    saveChannel("leftHand", pistol2[0].GetProperty("name").ToString());
                 }
                 else
                 {
-                    string rightHand = readChannel("pistol1");
-                    string leftHand = readChannel("pistol2");
+                    string rightHand = readChannel("rightHand");
+                    string leftHand = readChannel("leftHand");
                     MelonLogger.Msg("Found and loaded configuration. Right hand: " + rightHand + ", Left hand: " + leftHand);
                     ForceTubeVRInterface.ClearChannel(4);
                     ForceTubeVRInterface.ClearChannel(5);
@@ -114,8 +114,11 @@ namespace Bonelab_ProTube
                 float intensity = Mathf.Min(Mathf.Max(__instance.kickForce / 12.0f, 1.0f), 0.5f);
                 byte kickPower = (byte)(int)(intensity * 255);
                 ForceTubeVRChannel myChannel = ForceTubeVRChannel.pistol1;
-                if (!rightHanded) myChannel = ForceTubeVRChannel.pistol2;
-                ForceTubeVRInterface.Kick(kickPower, myChannel);
+                ForceTubeVRChannel secondaryChannel = ForceTubeVRChannel.pistol2;
+                if (!rightHanded) { myChannel = ForceTubeVRChannel.pistol2; secondaryChannel = ForceTubeVRChannel.pistol1; }
+                if (supportHand) ForceTubeVRInterface.Kick(120, secondaryChannel);
+                if (twoHanded) ForceTubeVRInterface.Shoot(kickPower, 150, 30f, myChannel);
+                else ForceTubeVRInterface.Kick(kickPower, secondaryChannel);
             }
         }
 
