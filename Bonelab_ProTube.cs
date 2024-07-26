@@ -7,8 +7,9 @@ using UnityEngine;
 using Il2Cpp;
 using System.Text;
 using System.Text.Json;
+using Il2CppSLZ.Marrow;
 
-[assembly: MelonInfo(typeof(Bonelab_ProTube.Bonelab_ProTube), "Bonelab_ProTube", "1.0.1", "Florian Fahrenberger")]
+[assembly: MelonInfo(typeof(Bonelab_ProTube.Bonelab_ProTube), "Bonelab_ProTube", "1.0.2", "Florian Fahrenberger")]
 [assembly: MelonGame("Stress Level Zero", "BONELAB")]
 
 namespace Bonelab_ProTube
@@ -73,11 +74,11 @@ namespace Bonelab_ProTube
             dualWieldSort();
         }
 
-        [HarmonyPatch(typeof(Il2CppSLZ.Props.Weapons.Gun), "Fire", new Type[] { })]
+        [HarmonyPatch(typeof(Gun), "Fire", new Type[] { })]
         public class bhaptics_FireGun
         {
             [HarmonyPostfix]
-            public static void Postfix(Il2CppSLZ.Props.Weapons.Gun __instance)
+            public static void Postfix(Gun __instance)
             {
                 bool rightHanded = false;
                 bool twoHanded = false;
@@ -92,7 +93,7 @@ namespace Bonelab_ProTube
                 
                 foreach (var myHand in __instance.triggerGrip.attachedHands)
                 {
-                    if (myHand.handedness == Il2CppSLZ.Handedness.RIGHT) rightHanded = true;
+                    if (myHand.handedness == Il2CppSLZ.Marrow.Interaction.Handedness.RIGHT) rightHanded = true;
                 }
 
                 if (__instance.otherGrips != null)
@@ -103,53 +104,54 @@ namespace Bonelab_ProTube
                         {
                             foreach (var myHand in myGrip.attachedHands)
                             {
-                                if ((myHand.handedness == Il2CppSLZ.Handedness.LEFT) && (rightHanded)) supportHand = true;
-                                if ((myHand.handedness == Il2CppSLZ.Handedness.RIGHT) && (!rightHanded)) supportHand = true;
+                                if ((myHand.handedness == Il2CppSLZ.Marrow.Interaction.Handedness.LEFT) && (rightHanded)) supportHand = true;
+                                if ((myHand.handedness == Il2CppSLZ.Marrow.Interaction.Handedness.RIGHT) && (!rightHanded)) supportHand = true;
                             }
                         }
                     }
                 }
 
                 //tactsuitVr.LOG("Kickforce: " + __instance.kickForce.ToString());
-                float intensity = Mathf.Min(Mathf.Max(__instance.kickForce / 12.0f, 1.0f), 0.5f);
+                //float intensity = Mathf.Min(Mathf.Max(__instance.kickForce / 12.0f, 1.0f), 0.5f);
+                float intensity = 1.0f;
                 byte kickPower = (byte)(int)(intensity * 255);
                 ForceTubeVRChannel myChannel = ForceTubeVRChannel.pistol1;
                 ForceTubeVRChannel secondaryChannel = ForceTubeVRChannel.pistol2;
                 if (!rightHanded) { myChannel = ForceTubeVRChannel.pistol2; secondaryChannel = ForceTubeVRChannel.pistol1; }
                 if (supportHand) ForceTubeVRInterface.Kick(120, secondaryChannel);
-                if (twoHanded) ForceTubeVRInterface.Shoot(kickPower, 150, 30f, myChannel);
-                else ForceTubeVRInterface.Kick(kickPower, secondaryChannel);
+                if (twoHanded) { ForceTubeVRInterface.Shoot(kickPower, 150, 30f, myChannel); }
+                else ForceTubeVRInterface.Kick(kickPower, myChannel);
             }
         }
 
 
-        [HarmonyPatch(typeof(Il2CppSLZ.Interaction.InventorySlotReceiver), "OnHandGrab", new Type[] { typeof(Il2CppSLZ.Interaction.Hand) })]
+        [HarmonyPatch(typeof(InventorySlotReceiver), "OnHandGrab", new Type[] { typeof(Hand) })]
         public class bhaptics_SlotGrab
         {
             [HarmonyPostfix]
-            public static void Postfix(Il2CppSLZ.Interaction.InventorySlotReceiver __instance, Il2CppSLZ.Interaction.Hand hand)
+            public static void Postfix(InventorySlotReceiver __instance, Hand hand)
             {
                 if (__instance.isInUIMode) return;
                 if (hand == null) return;
-                bool rightHand = (hand.handedness == Il2CppSLZ.Handedness.RIGHT);
+                bool rightHand = (hand.handedness == Il2CppSLZ.Marrow.Interaction.Handedness.RIGHT);
                 ForceTubeVRChannel myChannel = ForceTubeVRChannel.pistol1;
                 if (!rightHand) myChannel = ForceTubeVRChannel.pistol2;
                 ForceTubeVRInterface.Rumble(150, 40f, myChannel);
             }
         }
 
-        [HarmonyPatch(typeof(Il2CppSLZ.Interaction.InventorySlotReceiver), "OnHandDrop", new Type[] { typeof(Il2CppSLZ.Interaction.IGrippable) })]
+        [HarmonyPatch(typeof(InventorySlotReceiver), "OnHandDrop", new Type[] { typeof(IGrippable) })]
         public class bhaptics_SlotInsert
         {
             [HarmonyPostfix]
-            public static void Postfix(Il2CppSLZ.Interaction.InventorySlotReceiver __instance, Il2CppSLZ.Interaction.IGrippable host)
+            public static void Postfix(InventorySlotReceiver __instance, IGrippable host)
             {
                 if (__instance == null) return;
                 if (__instance.isInUIMode) return;
                 if (host == null) return;
-                Il2CppSLZ.Interaction.Hand hand = host.GetLastHand();
+                Hand hand = host.GetLastHand();
                 if (hand == null) return;
-                bool rightHand = (hand.handedness == Il2CppSLZ.Handedness.RIGHT);
+                bool rightHand = (hand.handedness == Il2CppSLZ.Marrow.Interaction.Handedness.RIGHT);
                 ForceTubeVRChannel myChannel = ForceTubeVRChannel.pistol1;
                 if (!rightHand) myChannel = ForceTubeVRChannel.pistol2;
                 ForceTubeVRInterface.Rumble(150, 40f, myChannel);
