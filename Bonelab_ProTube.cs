@@ -9,7 +9,7 @@ using System.Text;
 using System.Text.Json;
 using Il2CppSLZ.Marrow;
 
-[assembly: MelonInfo(typeof(Bonelab_ProTube.Bonelab_ProTube), "Bonelab_ProTube", "1.0.2", "Florian Fahrenberger")]
+[assembly: MelonInfo(typeof(Bonelab_ProTube.Bonelab_ProTube), "Bonelab_ProTube", "1.1.0", "Florian Fahrenberger")]
 [assembly: MelonGame("Stress Level Zero", "BONELAB")]
 
 namespace Bonelab_ProTube
@@ -18,6 +18,22 @@ namespace Bonelab_ProTube
     {
         public static string configPath = Directory.GetCurrentDirectory() + "\\UserData\\";
         public static bool dualWield = false;
+        // One ProVolver + one ForceTube on the same hand (sameHandRight.txt / sameHandLeft.txt in UserData):
+        // effects from that hand go to both devices, effects from the other hand are dropped.
+        public static bool sameHandRight = false;
+        public static bool sameHandLeft = false;
+
+        // Channel for an effect from this hand. Returns false if no device should react.
+        public static bool ChannelForHand(bool rightHand, out ForceTubeVRChannel channel)
+        {
+            if (sameHandRight || sameHandLeft)
+            {
+                channel = ForceTubeVRChannel.all;
+                return sameHandRight ? rightHand : !rightHand;
+            }
+            channel = rightHand ? ForceTubeVRChannel.pistol1 : ForceTubeVRChannel.pistol2;
+            return true;
+        }
 
         public override void OnInitializeMelon()
         {
@@ -45,6 +61,16 @@ namespace Bonelab_ProTube
             JsonElement pistol2 = doc.RootElement.GetProperty("channels").GetProperty("pistol2");
             if ((pistol1.GetArrayLength() > 0) && (pistol2.GetArrayLength() > 0))
             {
+                bool sameRight = File.Exists(configPath + "sameHandRight.txt");
+                bool sameLeft = File.Exists(configPath + "sameHandLeft.txt");
+                if (sameRight || sameLeft)
+                {
+                    if (sameRight && sameLeft) MelonLogger.Warning("Both sameHandRight.txt and sameHandLeft.txt exist, using right.");
+                    sameHandRight = sameRight;
+                    sameHandLeft = !sameRight;
+                    MelonLogger.Msg("Two ProTube devices detected, both used for the " + (sameRight ? "right" : "left") + " hand.");
+                    return;
+                }
                 dualWield = true;
                 MelonLogger.Msg("Two ProTube devices detected, player is dual wielding.");
                 if ((readChannel("pistol1") == "") || (readChannel("pistol2") == ""))
@@ -90,7 +116,7 @@ namespace Bonelab_ProTube
                 try { if (__instance.AmmoCount() <= 0) return; }
                 catch (NullReferenceException) { MelonLogger.Msg("NullReference in AmmoCount."); return; }
                 twoHanded = (__instance.triggerGrip.attachedHands.Count > 1);
-                
+
                 foreach (var myHand in __instance.triggerGrip.attachedHands)
                 {
                     if (myHand.handedness == Il2CppSLZ.Marrow.Interaction.Handedness.RIGHT) rightHanded = true;
@@ -115,10 +141,10 @@ namespace Bonelab_ProTube
                 //float intensity = Mathf.Min(Mathf.Max(__instance.kickForce / 12.0f, 1.0f), 0.5f);
                 float intensity = 1.0f;
                 byte kickPower = (byte)(int)(intensity * 255);
-                ForceTubeVRChannel myChannel = ForceTubeVRChannel.pistol1;
-                ForceTubeVRChannel secondaryChannel = ForceTubeVRChannel.pistol2;
-                if (!rightHanded) { myChannel = ForceTubeVRChannel.pistol2; secondaryChannel = ForceTubeVRChannel.pistol1; }
-                if (supportHand) ForceTubeVRInterface.Kick(120, secondaryChannel);
+                bool mainActive = ChannelForHand(rightHanded, out ForceTubeVRChannel myChannel);
+                bool supportActive = ChannelForHand(!rightHanded, out ForceTubeVRChannel secondaryChannel);
+                if (supportHand && supportActive) ForceTubeVRInterface.Kick(120, secondaryChannel);
+                if (!mainActive) return;
                 if (twoHanded) { ForceTubeVRInterface.Shoot(kickPower, 150, 30f, myChannel); }
                 else ForceTubeVRInterface.Kick(kickPower, myChannel);
             }
@@ -134,8 +160,7 @@ namespace Bonelab_ProTube
                 if (__instance.isInUIMode) return;
                 if (hand == null) return;
                 bool rightHand = (hand.handedness == Il2CppSLZ.Marrow.Interaction.Handedness.RIGHT);
-                ForceTubeVRChannel myChannel = ForceTubeVRChannel.pistol1;
-                if (!rightHand) myChannel = ForceTubeVRChannel.pistol2;
+                if (!ChannelForHand(rightHand, out ForceTubeVRChannel myChannel)) return;
                 ForceTubeVRInterface.Rumble(150, 40f, myChannel);
             }
         }
@@ -152,11 +177,10 @@ namespace Bonelab_ProTube
                 Hand hand = host.GetLastHand();
                 if (hand == null) return;
                 bool rightHand = (hand.handedness == Il2CppSLZ.Marrow.Interaction.Handedness.RIGHT);
-                ForceTubeVRChannel myChannel = ForceTubeVRChannel.pistol1;
-                if (!rightHand) myChannel = ForceTubeVRChannel.pistol2;
+                if (!ChannelForHand(rightHand, out ForceTubeVRChannel myChannel)) return;
                 ForceTubeVRInterface.Rumble(150, 40f, myChannel);
             }
         }
-        
+
     }
 }
